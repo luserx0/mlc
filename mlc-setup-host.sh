@@ -15,49 +15,57 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 # 02110-1301, USA
 
-
-# WARNING: 
-# This package requires root priveleges and may have bugs that format your hard disk!!!!
-# Use on your own risk! It is highly recommended to use provided scripts 
-# ONLY in a completely isolated environment like qmp or virtual box
-
 set -x
 set -e
 
-if true; then
-    apt-get update
-    apt-get install aptitude 
-    aptitude update
-    aptitude upgrade
-    aptitude install --assume-yes lxc1 lxc-templates ipcalc ebtables bridge-utils wireshark screen git-core openssh-server emacs cpufrequtils
+#export SUITE="$mlc_debian_suite"
+#export ARCH="$mlc_arch"
+
+
+if [ -f ./mlc-vars.sh ] ; then
+    . ./mlc-vars.sh
+else
+    echo "Could not find mlc-vars.sh in $(pwd)"; exit 1
 fi
 
+# Global Vars
+mother_name="${mlc_name_prefix}${mlc_mother_id}"
+mother_config="$mlc_conf_dir/$mother_name"
+mother_rootfs="$mlc_conf_dir/$mother_name/rootfs"
 
-if true; then
-    if [ -f /etc/screenrc ] && ! grep -qe "screen /bin/bash" /etc/screenrc; then
-	cat <<EOF >> /etc/screenrc
-term xterm-256color
-screen
-screen /bin/bash -c 'screen -X caption always " %{Wk}%?%F%{WK}%? %n %t %h %{r}\$STY@%H  %{g}%c:%s %d/%m/%y  %{w}%w %{R}%u"'
-EOF
-    fi
- 
-#    hostname MLC
-    if ! [ -f ~/.ssh/id_rsa ]; then
-	ssh-keygen -f ~/.ssh/id_rsa -P ""
-    fi
 
-    echo "use password: 'mlc'. And type enter for all other questions."
-    adduser mlc || true
-    adduser mlc sudo || true
-    adduser mlc wireshark || true
+install_deps() {
+  apt-get update
+  apt-get install aptitude 
+  aptitude update
+  aptitude upgrade
+  aptitude install --assume-yes lxc ipcalc ebtables bridge-utils wireshark screen git-core openssh-server emacs cpufrequtils
+}
 
-    if ! [ -f /home/mlc/.ssh/id_rsa ]; then
-        su -c 'ssh-keygen -f ~/.ssh/id_rsa -P ""' mlc
-    fi
 
-    if ! [ -f /home/mlc/.emacs ]; then
-	cat <<EOF >> /home/mlc/.emacs
+
+setup_user_accounts() {
+  
+  # hostname MLC
+  if ! [ -f ~/.ssh/id_rsa ]; then
+	  ssh-keygen -f ~/.ssh/id_rsa -P ""
+  fi
+
+  echo "[!!!]\tUse password: 'mlc'. And type enter for all other questions."
+  adduser mlc || true
+  adduser mlc sudo || true
+  adduser mlc wireshark || true
+
+  if ! [ -f /home/mlc/.ssh/id_rsa ]; then
+    su -c 'ssh-keygen -f ~/.ssh/id_rsa -P ""' mlc
+  fi
+}
+
+extras_configure() {
+  
+  # Emacs Setup
+  if ! [ -f /home/mlc/.emacs ]; then
+    cat <<EOF >> /home/mlc/.emacs
 ; from http://linux-quirks.blogspot.com/2010/02/emacs-mouse-scrolling.html
 ; Mouse Wheel Scrolling
 
@@ -98,12 +106,22 @@ EOF
 
 EOF
 
-	chown mlc:mlc /home/mlc/.emacs
+    chown mlc:mlc /home/mlc/.emacs
+  fi
+  
+  # Screen Setup
+  if [ -f /etc/screenrc ] && ! grep -qe "screen /bin/bash" /etc/screenrc; then
+	    cat <<EOF >> /etc/screenrc
+term xterm-256color
+screen
+screen /bin/bash -c 'screen -X caption always " %{Wk}%?%F%{WK}%? %n %t %h %{r}\$STY@%H  %{g}%c:%s %d/%m/%y  %{w}%w %{R}%u"'
+EOF
     fi
-fi
 
+}
 
-if ! grep -q mlc /etc/hosts; then
+setup_hostnames_table() {
+  if ! grep -q mlc /etc/hosts; then
     cat <<EOF >> /etc/hosts
 10.0.0.2 mlc
 10.0.0.2 mlc0002
@@ -144,54 +162,41 @@ if ! grep -q mlc /etc/hosts; then
 10.0.10.59 m1059
 10.0.10.69 m1069
 EOF
-fi
+  fi
+}
 
-
-if [ -f ./mlc-vars.sh ] ; then
-    . ./mlc-vars.sh
-else
-    echo "could not find mlc-vars.sh in $(pwd)"; exit 1
-fi
-
-mother_name="${mlc_name_prefix}${mlc_mother_id}"
-
-mother_config="$mlc_conf_dir/$mother_name"
-mother_rootfs="$mlc_conf_dir/$mother_name/rootfs"
-
-if true; then
-
+# TODO: Crunch
+lxc_network_creation() {
     MLC_assign_networks $mlc_mother_id
 
-    echo "input returned $? and  mlc_conf_dir=$mlc_conf_dir mother_name=$mother_name"
+    echo "Input returned $? and  mlc_conf_dir=$mlc_conf_dir mother_name=$mother_name"
 
     printf "\n"
-    printf "creating %s in %s\n" $mother_name $mother_config
+    printf "Creating %s in %s\n" $mother_name $mother_config
 
 
-    #export SUITE="$mlc_debian_suite"
-    #export ARCH="$mlc_arch"
 
     for s in $(lxc-ls); do
-	if echo $s | grep -q $mlc_name_prefix; then
-	    lxc-stop -n $s -k || echo "container $s already stopped"
-	fi
+	    if echo $s | grep -q $mlc_name_prefix; then
+	      lxc-stop -n $s -k || echo "container $s already stopped"
+	    fi
     done
 
     if false; then
-	rm -rf --preserve-root $mlc_conf_dir/$mlc_name_prefix*
+	    rm -rf --preserve-root $mlc_conf_dir/$mlc_name_prefix*
 
-	mkdir -p $mother_config
-	lxc-create -n $mother_name -t debian -P $mlc_conf_dir -- --arch=$mlc_arch --release=$mlc_debian_suite --enable-non-free --packages=$(echo $mlc_deb_packages | sed 's/ /,/g')
+	    mkdir -p $mother_config
+	    lxc-create -n $mother_name -t debian -P $mlc_conf_dir -- --arch=$mlc_arch --release=$mlc_debian_suite --enable-non-free --packages=$(echo $mlc_deb_packages | sed 's/ /,/g')
     fi
 
     MLC_configure_individual $mlc_mother_id
     if [ $? -ne 0 ]; then
-	echo "failed to configure $child_rootfs"; return 1
+	    echo "failed to configure $child_rootfs"; return 1
     fi
 
     MLC_create_lxc_config  $mother_name
     if [ $? -ne 0 ]; then
-	echo "failed write childs configuration file: $child_config"; return 1
+	    echo "failed write childs configuration file: $child_config"; return 1
     fi
 
 
@@ -238,42 +243,39 @@ PermitEmptyPasswords yes
 ChallengeResponseAuthentication no
 UseDNS no
 EOF
+  
+  # Set the root password
+  if [ -z $mlc_passwd ] ; then
+	  chroot $mother_rootfs /usr/bin/passwd -d root
+  else
+	  echo -e "$mlc_passwd\n$mlc_passwd" | chroot $mother_rootfs /usr/bin/passwd
+	  #echo -e "$mlc_passwd\n$mlc_passwd" | lxc-attach -n $mother_name passwd
+  fi
 
+  # Configure the public key:
+  mkdir -p $mother_rootfs/root/.ssh
+  echo "$mlc_pub_key"            >  $mother_rootfs/root/.ssh/authorized_keys
+  cat /root/.ssh/id_rsa.pub     >>  $mother_rootfs/root/.ssh/authorized_keys
+  cat /home/mlc/.ssh/id_rsa.pub >>  $mother_rootfs/root/.ssh/authorized_keys || true
 
+  lxc-attach -n $mother_name -- /etc/init.d/ssh restart
+  lxc-attach -n $mother_name -- mkdir -p /lib64
 
-    
-    # set the root passwd:
-    if [ -z $mlc_passwd ] ; then
-	chroot $mother_rootfs /usr/bin/passwd -d root
-    else
-	echo -e "$mlc_passwd\n$mlc_passwd" | chroot $mother_rootfs /usr/bin/passwd
-	#   echo -e "$mlc_passwd\n$mlc_passwd" | lxc-attach -n $mother_name passwd
-    fi
-
-    # configure the public key:
-    mkdir -p $mother_rootfs/root/.ssh
-    echo "$mlc_pub_key"            >  $mother_rootfs/root/.ssh/authorized_keys
-    cat /root/.ssh/id_rsa.pub     >>  $mother_rootfs/root/.ssh/authorized_keys
-    cat /home/mlc/.ssh/id_rsa.pub >>  $mother_rootfs/root/.ssh/authorized_keys || true
-
-
-    lxc-attach -n $mother_name -- /etc/init.d/ssh restart
-
-    lxc-attach -n $mother_name -- mkdir -p /lib64
-
-    if true; then
-	for project in $mlc_sources; do
+  if true; then
+	  for project in $mlc_sources; do
 	    project_name="$(echo $project | awk -F'::' '{print $1}')"
 	    project_repo="$(echo $project | awk -F'::' '{print $2}')"
-	    lxc-attach -n $mother_name -- wget -c --tries=10 --directory-prefix=/usr/src $project_repo
-	    lxc-attach -n $mother_name -- tar -C /usr/src -xzvf /usr/src/$project_name.tar.gz ||\
-		lxc-attach -n $mother_name -- tar -C /usr/src -xzvf /usr/src/$project_name-gpl.tgz
-	    lxc-attach -n $mother_name -- make clean all install -C /usr/src/$project_name 
-	done
-    fi
+	    
+      lxc-attach -n $mother_name -- wget -c --tries=10 --directory-prefix=/usr/src $project_repo
+      lxc-attach -n $mother_name -- tar -C /usr/src -xzvf /usr/src/$project_name.tar.gz ||\
+      lxc-attach -n $mother_name -- tar -C /usr/src -xzvf /usr/src/$project_name-gpl.tgz
+	    
+      lxc-attach -n $mother_name -- make clean all install -C /usr/src/$project_name 
+	  done
+  fi
 
-    if true; then
-	for project in $mlc_gits; do
+  if true; then
+	  for project in $mlc_gits; do
 	    project_name="$(echo $project | awk -F'::' '{print $1}')"
 	    project_repo="$(echo $project | awk -F'::' '{print $2}')"
 	    project_make="$(echo $project | awk -F'::' '{print $3}')"
@@ -281,27 +283,26 @@ EOF
 	    lxc-attach -n $mother_name -- rm -rf usr/src/$project_name
 	    lxc-attach -n $mother_name -- git clone $project_repo usr/src/$project_name
 	    if echo $project_name | grep -q bmx; then
-		lxc-attach -n $mother_name -- make -C /usr/src/$project_name clean_all build_all install_all EXTRA_CFLAGS="-pg -DPROFILING -DCORE_LIMIT=20000 -DTRAFFIC_DUMP -DCRYPTLIB=MBEDTLS_2_4_0"
+		    lxc-attach -n $mother_name -- make -C /usr/src/$project_name clean_all build_all install_all EXTRA_CFLAGS="-pg -DPROFILING -DCORE_LIMIT=20000 -DTRAFFIC_DUMP -DCRYPTLIB=MBEDTLS_2_4_0"
 	    elif echo $project_name | grep -q oonf; then
-		# from: http://www.olsr.org/mediawiki/index.php/OLSR.org_Network_Framework#olsrd2
-		$mlc_ssh root@mlc "cd /usr/src/oonf.git/build && git checkout v0.14.1 && cmake .. && make clean && make install"
-#		$mlc_ssh root@mlc "cd /usr/src/oonf.git/build                         && cmake .. && make clean && make install"
+		    # from: http://www.olsr.org/mediawiki/index.php/OLSR.org_Network_Framework#olsrd2
+		    $mlc_ssh root@mlc "cd /usr/src/oonf.git/build && git checkout v0.14.1 && cmake .. && make clean && make install"
+#		    $mlc_ssh root@mlc "cd /usr/src/oonf.git/build                         && cmake .. && make clean && make install"
 	    elif echo $project_name | grep -q uci; then
-		lxc-attach -n $mother_name -- make -C /usr/src/$project_name clean all install WOPTS="-pedantic -Wall"
+		    lxc-attach -n $mother_name -- make -C /usr/src/$project_name clean all install WOPTS="-pedantic -Wall"
 	    else
-		lxc-attach -n $mother_name -- make -C /usr/src/$project_name clean all install
+		    lxc-attach -n $mother_name -- make -C /usr/src/$project_name clean all install
 	    fi
-	done
-    fi
-
-fi
-
-
-true
-false
-false
+	  done
+  fi
+}
 
 
-
-
-
+control(){
+  install_deps
+  setup_user_accounts
+  extras_configure
+  setup_hostnames_table
+  lxc_network_creation
+}
+control

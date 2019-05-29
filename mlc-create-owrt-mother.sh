@@ -24,11 +24,10 @@
 # a completely isolated environment like qemu or virtual box
 
 
-
 if [ -f ./mlc-vars.sh ] ; then
     . ./mlc-vars.sh
 else
-    echo "could not find mlc-vars.sh in $(pwd)"; exit 1
+    echo "Could not find mlc-vars.sh in $(pwd)"; exit 1
 fi
 
 mother_name="${mlc_name_prefix}${mlc_mother_id}"

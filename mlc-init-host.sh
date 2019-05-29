@@ -26,13 +26,8 @@
 if [ -f ./mlc-vars.sh ] ; then
     . ./mlc-vars.sh
 else
-    echo "could not find mlc-vars.sh in $(pwd)"; exit 1
+    echo "Could not find mlc-vars.sh in $(pwd)"; exit 1
 fi
-
-if [ "$(id -u)" != "0" ]; then
-    echo "This script should be run as 'root'"; exit 1
-fi 
-
 
 if [ "$(id -u)" != "0" ]; then
     echo "This script should be run as 'root'"
@@ -101,7 +96,7 @@ mlc_cpu_max
 /etc/init.d/apport stop
 
 echo "WARNING! Disabled cron, munin, smokeping, ... services to prevent casual cpu load."
-echo " Reenable them after mlc usage!"
+echo "Re-enable them after mlc usage!"
 
 lxc-start -n $mlc_name_prefix$mlc_mother_id -d
 

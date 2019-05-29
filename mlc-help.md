@@ -1,8 +1,4 @@
-
-THIS file contains some configuration examples for copy and paster.
-Only use them if you know what they are doing.
-
-read HOWTO first !
+# Read README first!
 
 . ./mlc-vars.sh
 
@@ -11,7 +7,6 @@ read HOWTO first !
 
 mlc_loop -i 1000 -a 1009 -cb
 mlc_qdisc_prepare
-
 
 
 for node in \$( seq 1000 109 ) ; do mlc_link_set 1 1000 1 \$node 13 ; done

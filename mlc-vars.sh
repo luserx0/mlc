@@ -17,12 +17,6 @@
 # 02110-1301, USA
 
 
-# WARNING: 
-# This package requires root priveleges and may have bugs that format your hard disk!!!!
-# Use on your own risk! It is highly recommended to use provided scripts 
-# ONLY in a completely isolated environment like qmp or virtual box
-
-
 mlc_lxc_bin_dir="$(which lxc-create | awk -F'/lxc-create' '{print $1}')"
 mlc_lxc_examples="/usr/share/doc/lxc/examples"
 
@@ -437,16 +431,14 @@ oonf.git::https://github.com/OLSR/OONF.git \
 
 
 mlc_help() {
-
-    local mother_name="${mlc_name_prefix}${mlc_mother_id}"
-
-    less mlc-help.txt
+  local mother_name="${mlc_name_prefix}${mlc_mother_id}"
+  less mlc-help.md
 }
 
 mlc_rand() {
-    local max=${1:-"1000"}
-    local min=${2:-"0"}
-    echo $((( ( $(dd if=/dev/random bs=4 count=1 2>/dev/null | hexdump -e '"%u\n"') % (($max + 1) - $min) ) + $min )))
+  local max=${1:-"1000"}
+  local min=${2:-"0"}
+  echo $((( ( $(dd if=/dev/random bs=4 count=1 2>/dev/null | hexdump -e '"%u\n"') % (($max + 1) - $min) ) + $min )))
 }
 
 
@@ -513,7 +505,7 @@ mlc_cpu_set(){
 	  fi
 	 done
 	else
-	 echo "WARNING: unable to set cpus' $GOVERNOR governor"
+	 echo "WARNING: Unable to set cpus' $GOVERNOR governor"
 	fi
 	cpufreq-info
 }
@@ -549,7 +541,6 @@ mlc_cpu_sleep_until_idle() {
 }
 
 MLC_loop_boot() {
-#  set -x
   local node=$1
   local name="$mlc_name_prefix$1"
 
@@ -559,8 +550,8 @@ MLC_loop_boot() {
 
 
 MLC_loop_help() {
-  echo available long options are: $longopts
-  echo available short options are: $shortopts
+  echo Available long options are: $longopts
+  echo Available short options are: $shortopts
 }
 
 mlc_loop() {
@@ -679,33 +670,33 @@ MLC_setup_bridge() {
 
 mlc_peer_prepare() {
 
-    for idx in $( seq $mlc_peer_idx_min $mlc_peer_idx_max ) ; do
-	ebtables -I FORWARD -s $mlc_mac_prefix:0:0:$idx/FF:FF:FF:0:0:FF -j ACCEPT
-    done
+  for idx in $( seq $mlc_peer_idx_min $mlc_peer_idx_max ) ; do
+	  ebtables -I FORWARD -s $mlc_mac_prefix:0:0:$idx/FF:FF:FF:0:0:FF -j ACCEPT
+  done
 
 }
 
 
 mlc_peer_clear() {
 
-    local nodeA=$1
-    local nodeB=${2:-$nodeA}
+  local nodeA=$1
+  local nodeB=${2:-$nodeA}
 
-    local bridge=""
+  local bridge=""
 
-    if [ -z $nodeA ] ; then
-	echo "usage: mlc_peer_clear <nodeA> [nodeB]"; return 1;
-    fi
+  if [ -z $nodeA ] ; then
+	  echo "USAGE: mlc_peer_clear <nodeA> [nodeB]"; return 1;
+  fi
     
-    if ! ip link show | grep ${mlc_p2p_bridge_delimiter} | grep ${mlc_p2p_bridge_prefix}${nodeA} | grep ${mlc_p2p_bridge_prefix}${nodeB} > /dev/null 2>&1 ; then
-	return 1;
-    fi
+  if ! ip link show | grep ${mlc_p2p_bridge_delimiter} | grep ${mlc_p2p_bridge_prefix}${nodeA} | grep ${mlc_p2p_bridge_prefix}${nodeB} > /dev/null 2>&1 ; then
+	  return 1;
+  fi
 
 
-    local bridges="$( ip link show | grep ${mlc_p2p_bridge_delimiter} | grep ${mlc_p2p_bridge_prefix}${nodeA} | grep ${mlc_p2p_bridge_prefix}${nodeB}  | awk -F': ' '{print $2}' )"
-    local bridge=""
+  local bridges="$( ip link show | grep ${mlc_p2p_bridge_delimiter} | grep ${mlc_p2p_bridge_prefix}${nodeA} | grep ${mlc_p2p_bridge_prefix}${nodeB}  | awk -F': ' '{print $2}' )"
+  local bridge=""
 
-    echo "del bridge $bridges"
+  echo "Delete bridge $bridges"
 
     for bridge in $bridges; do
 
@@ -721,91 +712,92 @@ mlc_peer_clear() {
 #	done
 
     	ifconfig $bridge down
-	brctl delbr $bridge
+	    brctl delbr $bridge
     done
 }
 
 
 MLC_peer_alloc_idx() {
 
-    local node=$1
-    local cache_file="$mlc_tmp_dir/MLC_peer_alloc_idx.tmp"
+  local node=$1
+  local cache_file="$mlc_tmp_dir/MLC_peer_alloc_idx.tmp"
 
-    ip link show | grep "${mlc_p2p_bridge_delimiter}" | grep "${mlc_p2p_bridge_prefix}${node}${mlc_p2p_bridge_idx_delimiter}" > $cache_file
+  ip link show | grep "${mlc_p2p_bridge_delimiter}" | grep "${mlc_p2p_bridge_prefix}${node}${mlc_p2p_bridge_idx_delimiter}" > $cache_file
 
-    for idx in $( seq $mlc_peer_idx_min $mlc_peer_idx_max ) ; do
+  for idx in $( seq $mlc_peer_idx_min $mlc_peer_idx_max ) ; do
 	
-	if ! grep "${mlc_p2p_bridge_prefix}${node}${mlc_p2p_bridge_idx_delimiter}${idx}"  $cache_file > /dev/null 2>&1 ; then
+	  if ! grep "${mlc_p2p_bridge_prefix}${node}${mlc_p2p_bridge_idx_delimiter}${idx}"  $cache_file > /dev/null 2>&1 ; then
 	    echo "$idx"
 	    return 0;
-	fi
+	  fi
 
-    done
+  done
 
-    return 1;
+  return 1;
 }
 
 mlc_peer_get() {
 
-    local node=$1
+  local node=$1
 
-    local links=$( ip link show | grep ${mlc_p2p_bridge_delimiter} | grep ${mlc_p2p_bridge_prefix}${node} | awk -F': ' '{print $2}' )
-    local link
+  local links=$( ip link show | grep ${mlc_p2p_bridge_delimiter} | grep ${mlc_p2p_bridge_prefix}${node} | awk -F': ' '{print $2}' )
+  local link
 
-    for link in $links; do
-	printf "%s " $link
-    done
+  for link in $links; do
+	  printf "%s " $link
+  done
 
 }
 
 mlc_peer_set() {
 
-    local node_a=$1
-    local node_b=$2
+  local node_a=$1
+  local node_b=$2
 
-    if [ -z $node_a ] || [ -z $node_b ] ; then
-	echo "usage: mlc_peer_set <nodeA> <nodeB> [idxA] [idxB]"; return 1;
-    fi
+  if [ -z $node_a ] || [ -z $node_b ] ; then
+	  echo "USAGE: mlc_peer_set <nodeA> <nodeB> [idxA] [idxB]"; return 1;
+  fi
 
-    if [ "$node_a" == "$node_b" ] ; then
-	return 0
-    fi
+  if [ "$node_a" == "$node_b" ] ; then
+	  return 0
+  fi
 
-    if [ "$node_a" -gt "$node_b" ] ; then
-	local node_x=$node_a
-	node_a=$node_b
-	node_b=$node_x
-    fi
+  # Swap nodes
+  if [ "$node_a" -gt "$node_b" ] ; then
+	  local node_x=$node_a
+	  node_a=$node_b
+	  node_b=$node_x
+  fi
     
-    mlc_peer_clear $node_a $node_b
+  mlc_peer_clear $node_a $node_b
 
-    local idx_a=${3:-"$(MLC_peer_alloc_idx $node_a )"}
-    local idx_b=${4:-"$(MLC_peer_alloc_idx $node_b )"}
+  local idx_a=${3:-"$(MLC_peer_alloc_idx $node_a )"}
+  local idx_b=${4:-"$(MLC_peer_alloc_idx $node_b )"}
 
-    if [ -z $idx_a ] || [ -z $idx_b ] ; then
-	echo "ERROR: no idx available"; return 1;
-    fi
+  if [ -z $idx_a ] || [ -z $idx_b ] ; then
+	  echo "ERROR: no idx available"; return 1;
+  fi
     
 
-    local veth_a="$(MLC_get_veth_cache $node_a $idx_a)"
-    local veth_b="$(MLC_get_veth_cache $node_b $idx_b)"
+  local veth_a="$(MLC_get_veth_cache $node_a $idx_a)"
+  local veth_b="$(MLC_get_veth_cache $node_b $idx_b)"
 
-    if ! ip link show dev $veth_a > /dev/null 2>&1 || ! ip link show dev $veth_b > /dev/null ; then
-	echo "veth interfaces could not be found"; return 1;
-    fi
+  if ! ip link show dev $veth_a > /dev/null 2>&1 || ! ip link show dev $veth_b > /dev/null ; then
+	  echo "veth interfaces could not be found"; return 1;
+  fi
 
-    local bridge_name="${mlc_p2p_bridge_prefix}${node_a}${mlc_p2p_bridge_idx_delimiter}${idx_a}${mlc_p2p_bridge_delimiter}${mlc_p2p_bridge_prefix}${node_b}${mlc_p2p_bridge_idx_delimiter}${idx_b}"
+  local bridge_name="${mlc_p2p_bridge_prefix}${node_a}${mlc_p2p_bridge_idx_delimiter}${idx_a}${mlc_p2p_bridge_delimiter}${mlc_p2p_bridge_prefix}${node_b}${mlc_p2p_bridge_idx_delimiter}${idx_b}"
 
-    echo "creating bridge $bridge_name ifA $veth_a ifB $veth_b"
+  echo "Creating bridge $bridge_name ifA $veth_a ifB $veth_b"
 
-    brctl addbr $bridge_name
-    brctl setfd $bridge_name 0
-    ifconfig    $bridge_name up
-    ifconfig    $bridge_name promisc
+  brctl addbr $bridge_name
+  brctl setfd $bridge_name 0
+  ifconfig    $bridge_name up
+  ifconfig    $bridge_name promisc
 
 
-    brctl addif $bridge_name $veth_a
-    brctl addif $bridge_name $veth_b
+  brctl addif $bridge_name $veth_a
+  brctl addif $bridge_name $veth_b
 
 #    ebtables -I FORWARD -o $veth_a -j ACCEPT
 #    ebtables -I FORWARD -o $veth_b -j ACCEPT
@@ -831,14 +823,14 @@ mlc_ls() {
   for name in $(lxc-ls | sort -u); do
     if lxc-info -n $name | grep -q RUNNING ; then
       printf "%-10s %-10s %s \n" $name "RUNNING " "$( mlc_peer_get $(echo $name | awk -F $mlc_name_prefix '{print $2}' ) )"
-
     fi
   done
 }
 
 
 MLC_veth_obtain() {
-#set -x
+  
+  #set -x
   local name=
   local dev=
   local cache_file="$mlc_tmp_dir/MLC_veth_obtain.tmp"
@@ -854,7 +846,7 @@ MLC_veth_obtain() {
 
       if ping -n -c1 $node_ip > /dev/null ; then
 	  
-#	      for dev in $( $mlc_ssh root@$node_ip ip link | tee $cache_file | grep ": ${mlc_dev_prefix}" | grep -v "@" | awk -F ': ' '{print $2}' | sort -u) ; do
+        #for dev in $( $mlc_ssh root@$node_ip ip link | tee $cache_file | grep ": ${mlc_dev_prefix}" | grep -v "@" | awk -F ': ' '{print $2}' | sort -u) ; do
 	      for dev in $( lxc-attach -n $name -- ip link | tee $cache_file | grep ": ${mlc_dev_prefix}" | grep -v "@" | awk -F ': ' '{print $2}' | sort -u) ; do
 
 		printf "%8s: " $dev
@@ -890,7 +882,7 @@ MLC_veth_obtain() {
 
 	      done
       else
-	printf "ERROR: not reachable"
+	      printf "ERROR: not reachable"
       fi
 
     else
@@ -938,22 +930,19 @@ mlc_net_flush() {
 
 
 mlc_qdisc_clear() {
-    local idx_list=${1:-"1 2"}
-    local idx
+  local idx_list=${1:-"1 2"}
+  local idx
 
-#   mlc_net_flush
-    
-    for idx in $idx_list ; do
-
-	echo "clearing qdisc idx=$idx of idx_list=$idx_list"
-	local dev
+  #   mlc_net_flush 
+  for idx in $idx_list ; do
+	  echo "clearing qdisc idx=$idx of idx_list=$idx_list"
+	  local dev
 	
-	for dev in $( tc qdisc | grep "qdisc prio 1: dev $mlc_veth_prefix" | grep "_$idx" |  awk -F 'dev ' '{print $2}' | awk '{print $1 }' ) ; do
+	  for dev in $( tc qdisc | grep "qdisc prio 1: dev $mlc_veth_prefix" | grep "_$idx" |  awk -F 'dev ' '{print $2}' | awk '{print $1 }' ) ; do
 	    echo "setting qdisc rules for dev $dev"
-  	    tc qdisc del dev $dev root
-	done
-
-    done
+  	  tc qdisc del dev $dev root
+	  done
+  done
 }
 
 MLC_qdisc_set_rule() {
@@ -973,9 +962,9 @@ MLC_qdisc_set_rule() {
 MLC_qdisc_set_rules() {
   local dev=$1
 
-    if tc qdisc | grep -q "qdisc prio 1: dev $dev" ; then
-      tc qdisc del dev $dev root
-    fi
+  if tc qdisc | grep -q "qdisc prio 1: dev $dev" ; then
+    tc qdisc del dev $dev root
+  fi
   
   tc qdisc add dev $dev root handle 1: prio bands 16 priomap 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 
 #  tc qdisc add dev $a_veth parent 1:1  netem loss 100%
@@ -1111,14 +1100,14 @@ mlc_link_set() {
   
   a_veth="$( MLC_get_veth_cache $a_node $a_ifn )"
     if [ $? -ne 0 ]; then
-	echo "Failed to resolve veth for $a_veth"
-	return 1
+	    echo "Failed to resolve veth for $a_veth"
+	    return 1
     fi
 
   b_veth="$( MLC_get_veth_cache $b_node $b_ifn )"
     if [ $? -ne 0 ]; then
-	echo "Failed to resolve veth for $b_veth"
-	return 1
+	    echo "Failed to resolve veth for $b_veth"
+	    return 1
     fi
 
   echo mlc_link_set ${mlc_dev_prefix}$a_ifn $a_node $a_veth TQ=$a_tq -- ${mlc_dev_prefix}$b_ifn $b_node $b_veth TQ=$b_tq
@@ -1186,7 +1175,7 @@ return 1
   local br;  for br in $( brctl show | grep mlc | awk '{print $1}'); do brctl delif $br $dev ; echo "in bridge $br"; done
 
   brctl show  $mlc_bridge_prefix$ifn | grep "$dev$" || \
-      brctl addif $mlc_bridge_prefix$ifn $dev
+  brctl addif $mlc_bridge_prefix$ifn $dev
 
   MLC_qdisc_set_rules $dev
   MLC_qdisc_set_rules $a_veth
@@ -1216,14 +1205,14 @@ mlc_link_periodicy() {
   
   b_veth="$( MLC_get_veth_cache $b $ifn )"
     if [ $? -ne 0 ]; then
-	echo "Failed to resolve veth for mlc$b"
-	return 1
+	    echo "Failed to resolve veth for mlc$b"
+	    return 1
     fi
 
   lq_old="$( MLC_link_get $a_mac $b_veth )"
     if [ $? -ne 0 ]; then
-	echo "Failed to resolve link-qualtiy for link $ifn $a -- $b $a_mac $b_veth"
-	return 1
+	    echo "Failed to resolve link-qualtiy for link $ifn $a -- $b $a_mac $b_veth"
+	    return 1
     fi
 
   printf "varying link-quality of channel $ifn  link $a -- $b  range [$lqa..$lqb] $lq_old   period $period s  for $duration s \n"
@@ -1241,7 +1230,6 @@ mlc_link_periodicy() {
   done
   
   mlc_link_set  $ifn $a  $ifn $b $(( $lq_old ))
-  
 }
 
 
@@ -1263,7 +1251,7 @@ mlc_configure_line() {
      echo "example: mlc_configure_line 1  [3]  [5]       [$mlc_max_node]     [13] [15]      [$mlc_min_node]     [1]" &&\
      return 1
 
-#assign default values see:http://snipplr.com/view/11080/setting-default-value-for-bash-variable/
+  #assign default values see:http://snipplr.com/view/11080/setting-default-value-for-bash-variable/
   local ifn=$1
   local tq=${2:-3}  # assign default value of 3 if $2 is not set
   local loop_tq=${3:-0}
@@ -1320,15 +1308,15 @@ mlc_configure_grid() {
   echo "$0 ifn=$ifn lq=$default_lq/$default_rq x_lq=$loop_x_lq/$loop_x_rq y_lq=$loop_y_lq/$loop_y_rq diagonal=$diagonal distance=$distance min=$min max=$max x_max=$x_max y_max=$y_max row_size=$row_size"
 
   for y0 in $( seq 0 $y_max ) ; do
-      let y1=$(( $y0 + $distance ))
+    let y1=$(( $y0 + $distance ))
 
-      for x0 in $( seq 0 $x_max ) ; do
-	let x1=$(( $x0 + $distance ))
+    for x0 in $( seq 0 $x_max ) ; do
+	    let x1=$(( $x0 + $distance ))
 
-        let x_wrap=$(( $x_max - $distance ))
-        let y_wrap=$(( $y_max - $distance ))
-        let x_curr=$x0
-        let y_curr=$(( ( $row_size * $y0 ) ))
+      let x_wrap=$(( $x_max - $distance ))
+      let y_wrap=$(( $y_max - $distance ))
+      let x_curr=$x0
+      let y_curr=$(( ( $row_size * $y0 ) ))
 #       let curr=$(( $min + $y_curr + $x_curr ))
 
 	if [ $x0 -le $x_wrap ] ; then
@@ -1344,7 +1332,6 @@ mlc_configure_grid() {
 	  let y_next=$(( $row_size * ( $y1 - $col_size ) ))
 	fi
 
-        
         if [ "$diagonal" == "0" ] ; then
 
 	  # prepare link to right neighbor
@@ -1400,7 +1387,7 @@ mlc_configure_grid() {
 mlc_ns3_prepare() {
 
     for idx in $( seq $mlc_ns3_idx_min $mlc_ns3_idx_max ) ; do
-	ebtables -I FORWARD -s $mlc_mac_prefix:0:0:$idx/FF:FF:FF:0:0:FF -j ACCEPT
+	    ebtables -I FORWARD -s $mlc_mac_prefix:0:0:$idx/FF:FF:FF:0:0:FF -j ACCEPT
     done
 
 }
@@ -1441,10 +1428,7 @@ mlc_ns3_connect() {
       ifconfig $tap_name 0.0.0.0 promisc up
       brctl addif $bridge_name $tap_name
 
-
   done
-
-
 }
 
 
@@ -1479,16 +1463,16 @@ mlc_peer_grid() {
   echo "$0 ifn=$ifn lq=$default_lq/$default_rq x_lq=$loop_x_lq/$loop_x_rq y_lq=$loop_y_lq/$loop_y_rq diagonal=$diagonal distance=$distance min=$min max=$max x_max=$x_max y_max=$y_max row_size=$row_size"
 
   for y0 in $( seq 0 $y_max ) ; do
-      let y1=$(( $y0 + $distance ))
+    let y1=$(( $y0 + $distance ))
 
-      for x0 in $( seq 0 $x_max ) ; do
-	let x1=$(( $x0 + $distance ))
+    for x0 in $( seq 0 $x_max ) ; do
+	    let x1=$(( $x0 + $distance ))
 
-        let x_wrap=$(( $x_max - $distance ))
-        let y_wrap=$(( $y_max - $distance ))
-        let x_curr=$x0
-        let y_curr=$(( ( $row_size * $y0 ) ))
-#       let curr=$(( $min + $y_curr + $x_curr ))
+      let x_wrap=$(( $x_max - $distance ))
+      let y_wrap=$(( $y_max - $distance ))
+      let x_curr=$x0
+      let y_curr=$(( ( $row_size * $y0 ) ))
+      #let curr=$(( $min + $y_curr + $x_curr ))
 
 	if [ $x0 -le $x_wrap ] ; then
 	  let x_next=$(( $x1 - 000000000 ))
@@ -1571,8 +1555,8 @@ MLC_get_input_args() {
     fi
 
     if ! debootstrap --help > /dev/null; then
-	echo "'debootstrap' command is missing"
-	return 1
+	    echo "'debootstrap' command is missing"
+	    return 1
     fi
 
     # echo MLC_get_input_args $@ || return 1
@@ -1588,28 +1572,27 @@ MLC_get_input_args() {
 	    case "$1" in
 		    --id) MLC_assign_networks $2 ; shift 2 ;;
 		    --) shift ; break ;;
-		    *) echo "Internal error!" ; return 1 ;;
+		    *) echo "Internal ERROR!" ; return 1 ;;
 	    esac
     done
 
-    if [ "$1" != "" ] ; then echo "found illegal commands: $@" ; return 1 ; fi
+    if [ "$1" != "" ] ; then echo "Found illegal commands: $@" ; return 1 ; fi
 
 
     if [ ! -d "$mlc_conf_dir" ]; then
-	echo "specified path to mlc configs and rootfs '$mlc_conf_dir' does not exist"
-	return 1
+	    echo "Specified path to mlc configs and rootfs '$mlc_conf_dir' does not exist"
+	    return 1
     fi
 
     if [ ! -d "$mlc_path_dir" ]; then
-	echo "specified path to mlc home dir: '$mlc_path_dir' does not exist"
-	return 1
+	    echo "Specified path to mlc home dir: '$mlc_path_dir' does not exist"
+	    return 1
     fi
 
     if [ "$(id -u)" != "0" ]; then
-	echo "This script should be run as 'root'"
-	return 1
+	    echo "This script should be run as 'root'"
+	    return 1
     fi 
-
 }
 
 
